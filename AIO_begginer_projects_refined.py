@@ -1,684 +1,512 @@
+"""
+All-In-One Beginner Projects
+============================
+
+A collection of small games and tools in one file:
+
+    1. Tic-Tac-Toe
+    2. Rock-Paper-Scissors
+    3. Number Guessing Game
+    4. Coin Flip
+    5. Temperature Converter
+    6. Simple Calculator
+    7. Dice Roller
+
+Run it with:  python AIO_begginer_projects_refined.py
+
+Every project is its own class with a play() method.
+The GameSuite class at the bottom shows a menu and calls play() on the chosen project.
+"""
+
 import os
 import random
 import time
-from typing import List, Tuple, Optional
 
-# Constants
-PLAYER_X = "X"
-PLAYER_O = "O"
-TIE_RESULT = "tie"
-MIN_DICE_SIDES = 2
-COIN_FLIP_DELAY = 0.5
 
-# Clear the console function based on operating system
-def clear_screen() -> None:
-    '''Clear the terminal screen.'''
+# ---------------------- HELPER FUNCTIONS ----------------------
+# Small functions that several projects use.
+
+def clear_screen():
+    """Clear the terminal ("cls" on Windows, "clear" everywhere else)."""
     os.system("cls" if os.name == "nt" else "clear")
 
-# Utility functions
-def get_yes_no_input(prompt: str) -> bool:
-    '''Get a yes/no input from the user.'''
+
+def pause():
+    """Wait until the user presses Enter."""
+    input("\nPress Enter to continue...")
+
+
+def ask_yes_no(question):
+    """Keep asking until the user answers yes or no. Returns True for yes."""
     while True:
-        response = input(f"{prompt} (yes/no): ").lower().strip()
-        if response in ["y", "yes"]:
+        answer = input(f"{question} (yes/no): ").strip().lower()
+        if answer in ("y", "yes"):
             return True
-        elif response in ["n", "no"]:
+        if answer in ("n", "no"):
             return False
+        print("Please enter 'yes' or 'no'.")
+
+
+def ask_int(question, min_value=None, max_value=None):
+    """Keep asking until the user types a whole number inside the allowed range."""
+    while True:
+        try:
+            number = int(input(question))
+        except ValueError:
+            print("Please enter a whole number.")
+            continue
+
+        if min_value is not None and number < min_value:
+            print(f"The number must be at least {min_value}.")
+        elif max_value is not None and number > max_value:
+            print(f"The number must be at most {max_value}.")
         else:
-            print("Please enter 'yes' or 'no'.")
+            return number
 
-def validate_integer_input(prompt: str, min_value: Optional[int] = None, 
-                        max_value: Optional[int] = None, 
-                        error_message: Optional[str] = None) -> int:
-    '''Validate integer input within optional range.'''
+
+def ask_float(question):
+    """Keep asking until the user types a number (decimals allowed)."""
     while True:
         try:
-            user_input = int(input(prompt))
-            if min_value is not None and user_input < min_value:
-                print(error_message or f"Value must be at least {min_value}.")
-                continue
-            if max_value is not None and user_input > max_value:
-                print(error_message or f"Value must be at most {max_value}.")
-                continue
-            return user_input
+            return float(input(question))
         except ValueError:
-            print("Please enter a valid number.")
+            print("Please enter a number.")
 
-def validate_float_input(prompt: str) -> float:
-    '''Validate float input.'''
-    while True:
-        try:
-            return float(input(prompt))
-        except ValueError:
-            print("Please enter a valid number.")
 
-# ---------------------- TIC-TAC-TOE GAME CLASS ----------------------
-class TicTacToeGame:
-    def __init__(self):
-        self.reset_game()
+def format_number(number):
+    """Show 4.0 as 4 and round long decimals, e.g. 0.30000000000000004 -> 0.3."""
+    number = round(number, 10)
+    if number == int(number):
+        return str(int(number))
+    return str(number)
 
-    def reset_game(self) -> None:
-        '''Reset the game board and variables.'''
-        self.available_moves = list(range(1, 10))
-        self.current_player = PLAYER_X
-        self.board = self.create_board()
 
-    def create_board(self) -> Tuple[List[str], ...]:
-        '''Create a new game board.'''
-        return (
-            [str(i) for i in range(1, 4)],
-            [str(i) for i in range(4, 7)],
-            [str(i) for i in range(7, 10)]
-        )
+# ---------------------- 1. TIC-TAC-TOE ----------------------
 
-    def print_board(self) -> None:
-        '''Print the current game board.'''
-        for row in self.board:
-            print(" | ".join(row))
-            print("-" * 9)
+class TicTacToe:
+    # Every group of 3 squares that wins the game (squares are numbered 1-9).
+    WINNING_LINES = [
+        (1, 2, 3), (4, 5, 6), (7, 8, 9),  # rows
+        (1, 4, 7), (2, 5, 8), (3, 6, 9),  # columns
+        (1, 5, 9), (3, 5, 7),             # diagonals
+    ]
 
-    def get_user_move(self) -> None:
-        '''Get and validate user move.'''
-        while True:
-            try:
-                print(f"Available moves: {self.available_moves}")
-                user_move = int(input(f"Player {self.current_player}, enter your move: "))
-                if user_move in self.available_moves:
-                    row, col = divmod(user_move - 1, 3)  # More Pythonic way to get row and column
-                    self.board[row][col] = self.current_player
-                    self.available_moves.remove(user_move)
-                    return
-                else:
-                    print("Move isn't available. Please select from the available moves!")
-            except ValueError:
-                print("Please enter a valid number from the available moves.")
+    def reset(self):
+        """Start a fresh game."""
+        # The board is a dictionary: square number -> what's in it ("1".."9", "X" or "O").
+        self.board = {square: str(square) for square in range(1, 10)}
+        self.current_player = "X"
 
-    def get_ai_move(self) -> None:
-        '''Generate an AI move.'''
-        ai_move = random.choice(self.available_moves)
-        print(f"AI's move: {ai_move}")
-        row, col = divmod(ai_move - 1, 3)  # More Pythonic way to get row and column
-        self.board[row][col] = self.current_player
-        self.available_moves.remove(ai_move)
+    def print_board(self):
+        b = self.board
+        print(f"\n {b[1]} | {b[2]} | {b[3]}")
+        print("---+---+---")
+        print(f" {b[4]} | {b[5]} | {b[6]}")
+        print("---+---+---")
+        print(f" {b[7]} | {b[8]} | {b[9]}\n")
 
-    def check_win(self) -> Optional[str]:
-        '''Check if there's a win or tie.'''
-        # Check rows
-        for i in range(3):
-            if self.board[i][0] == self.board[i][1] == self.board[i][2]:
-                return self.board[i][0]
-        
-        # Check columns
-        for i in range(3):
-            if self.board[0][i] == self.board[1][i] == self.board[2][i]:
-                return self.board[0][i]
-        
-        # Check diagonals
-        if self.board[0][0] == self.board[1][1] == self.board[2][2]:
-            return self.board[0][0]
-        if self.board[0][2] == self.board[1][1] == self.board[2][0]:
-            return self.board[0][2]
-        
-        # Check for tie
-        if not self.available_moves:
-            return TIE_RESULT
-        
+    def free_squares(self):
+        """Return a list of the squares nobody has taken yet."""
+        return [square for square in self.board if self.board[square] not in ("X", "O")]
+
+    def get_winner(self):
+        """Return "X" or "O" if someone won, otherwise None."""
+        for a, b, c in self.WINNING_LINES:
+            if self.board[a] == self.board[b] == self.board[c]:
+                return self.board[a]
         return None
 
-    def switch_player(self) -> None:
-        '''Switch to the other player.'''
-        self.current_player = PLAYER_O if self.current_player == PLAYER_X else PLAYER_X
+    def human_move(self):
+        while True:
+            square = ask_int(f"Player {self.current_player}, choose a square (1-9): ", 1, 9)
+            if square in self.free_squares():
+                return square
+            print("That square is already taken. Try another one.")
 
-    def play(self) -> None:
-        '''Main game loop.'''
+    def ai_move(self):
+        """
+        A simple AI:
+        1. If it can win right now, it does.
+        2. If the human could win on their next move, it blocks them.
+        3. Otherwise it picks a random free square.
+        """
+        opponent = "X" if self.current_player == "O" else "O"
+
+        for player in (self.current_player, opponent):
+            for square in self.free_squares():
+                self.board[square] = player            # try the move...
+                wins = self.get_winner() == player
+                self.board[square] = str(square)       # ...then undo it
+                if wins:
+                    return square
+
+        return random.choice(self.free_squares())
+
+    def play(self):
         clear_screen()
-        print("Tic-Tac-Toe Game")
-        
-        ai_mode = get_yes_no_input("Do you want to play against the AI?")
-        if ai_mode:
-            print("AI mode enabled!")
-        
-        game_over = False
-        
-        while not game_over:
-            self.print_board()
-            
-            # Get move (user or AI)
-            self.get_user_move()
-            
-            # Check for win after user move
-            result = self.check_win()
-            if result:
+        print("Tic-Tac-Toe")
+        against_ai = ask_yes_no("Do you want to play against the AI?")
+
+        while True:
+            self.reset()
+
+            # One loop turn = one move. Stop when someone wins or the board is full.
+            while True:
                 clear_screen()
                 self.print_board()
-                if result == TIE_RESULT:
-                    print("It's a tie!")
+
+                if against_ai and self.current_player == "O":
+                    square = self.ai_move()
                 else:
-                    print(f"Player {result} wins!")
-                
-                if get_yes_no_input("Would you like to play again?"):
-                    self.reset_game()
-                    continue
-                else:
+                    square = self.human_move()
+                self.board[square] = self.current_player
+
+                winner = self.get_winner()
+                if winner or not self.free_squares():
                     break
-            
-            # Switch player
-            self.switch_player()
-            
-            # AI move if in AI mode
-            if ai_mode and self.available_moves:
-                self.get_ai_move()
-                
-                # Check for win after AI move
-                result = self.check_win()
-                if result:
-                    clear_screen()
-                    self.print_board()
-                    if result == TIE_RESULT:
-                        print("It's a tie!")
-                    else:
-                        print(f"Player {result} wins!")
-                    
-                    if get_yes_no_input("Would you like to play again?"):
-                        self.reset_game()
-                        continue
-                    else:
-                        break
-                
-                # Switch player back to user
-                self.switch_player()
 
-# ---------------------- ROCK-PAPER-SCISSORS GAME CLASS ----------------------
-class RockPaperScissorsGame:
-    # Game choices
-    ROCK = "rock"
-    PAPER = "paper"
-    SCISSORS = "scissors"
-    
-    def __init__(self):
-        self.reset_settings()
-        self.scores = {"Player 1": 0, "Player 2": 0}
-        self.valid_choices = {
-            "1": self.ROCK, "rock": self.ROCK, "r": self.ROCK,
-            "2": self.PAPER, "paper": self.PAPER, "p": self.PAPER,
-            "3": self.SCISSORS, "scissors": self.SCISSORS, "s": self.SCISSORS
-        }
-        self.menu_choices = ["menu", "main menu"]
+                # Switch turns
+                self.current_player = "O" if self.current_player == "X" else "X"
 
-    def reset_settings(self) -> None:
-        '''Reset game settings to default.'''
-        self.require_names = True
-        self.two_player_mode = False
-        self.has_names = False
-        self.player1_name = "Player 1"
-        self.player2_name = "The Bot"
-
-    def main_menu(self) -> None:
-        '''Display the main menu for Rock-Paper-Scissors.'''
-        clear_screen()
-        print("""
-Rock, Paper, Scissors!
-The game where Rock beats Scissors, Scissors beats Paper, and Paper beats Rock!
-Pro tip 1: You can use the numbers to choose.
-Pro tip 2: Type "menu" to return to the menu at any time.
-
-Please choose an option:
-1. New Game
-2. Settings
-3. Back to Main Menu
-""")
-        choice = input("Enter your choice: ").lower().strip()
-        
-        if choice in ["1", "new game", "n"]:
-            self.pre_game()
-        elif choice in ["2", "settings", "s"]:
-            self.settings_menu()
-        elif choice in ["3", "back to main menu", "b"] + self.menu_choices:
-            return
-        else:
-            print("Invalid option. Please try again.")
-            self.main_menu()
-
-    def get_player_names(self) -> bool:
-        '''Get player names based on settings.'''
-        clear_screen()
-        self.player1_name = input("Player 1, enter your name: ").strip()
-        if self.player1_name.lower() in self.menu_choices:
-            self.main_menu()
-            return False
-        
-        if self.two_player_mode:
-            self.player2_name = input("Player 2, enter your name: ").strip()
-            if self.player2_name.lower() in self.menu_choices:
-                self.main_menu()
-                return False
-            print(f"Hello {self.player1_name} and {self.player2_name}!")
-        else:
-            print(f"Hello {self.player1_name}. You'll be playing against {self.player2_name}.")
-        
-        input("Press Enter to continue...")
-        self.has_names = True
-        return True
-
-    def pre_game(self) -> None:
-        '''Prepare for the game.'''
-        clear_screen()
-        if self.require_names and not self.has_names:
-            if not self.get_player_names():
-                return
-        
-        self.play_round()
-
-    def get_player_choice(self, player_name: str) -> Optional[str]:
-        '''Get a player's choice.'''
-        while True:
-            choice = input(f"""{player_name}, please choose:
-1. Rock
-2. Paper
-3. Scissors
-""").lower().strip()
-            
-            if choice in self.valid_choices:
-                return self.valid_choices[choice]
-            elif choice in self.menu_choices:
-                self.main_menu()
-                return None
+            clear_screen()
+            self.print_board()
+            if winner:
+                print(f"Player {winner} wins!")
             else:
-                print("Invalid choice. Please try again.")
+                print("It's a tie!")
 
-    def play_round(self) -> None:
-        '''Play a single round of the game.'''
-        clear_screen()
-        
-        # Get player 1's choice
-        player1_choice = self.get_player_choice(self.player1_name)
-        if player1_choice is None:
-            return
-        clear_screen()
-        
-        # Get player 2's choice
-        if self.two_player_mode:
-            player2_choice = self.get_player_choice(self.player2_name)
-            if player2_choice is None:
-                return
-        else:
-            player2_choice = random.choice([self.ROCK, self.PAPER, self.SCISSORS])
-        clear_screen()
-        
-        # Show choices and determine winner
-        print(f"{self.player1_name} chose {player1_choice}")
-        print(f"{self.player2_name} chose {player2_choice}")
-        
-        # Determine winner - more Pythonic way using tuples
-        if player1_choice == player2_choice:
-            print("It's a tie!")
-        elif (player1_choice, player2_choice) in [(self.ROCK, self.SCISSORS), 
-                                                (self.SCISSORS, self.PAPER), 
-                                                (self.PAPER, self.ROCK)]:
-            print(f"{self.player1_name} wins!")
-            self.scores["Player 1"] += 1
-        else:
-            print(f"{self.player2_name} wins!")
-            self.scores["Player 2"] += 1
-        
-        self.print_scores()
-        input("Press Enter to continue...")
-        self.after_game_menu()
+            if not ask_yes_no("\nWould you like to play again?"):
+                break
 
-    def print_scores(self) -> None:
-        '''Print the current scores.'''
-        print(f"\n{self.player1_name}'s score: {self.scores['Player 1']}")
-        print(f"{self.player2_name}'s score: {self.scores['Player 2']}")
 
-    def after_game_menu(self) -> None:
-        '''Display menu after a game.'''
-        clear_screen()
-        self.print_scores()
-        
-        print("""\nWhat would you like to do?
-1. Play Again
-2. Rock-Paper-Scissors Menu
-3. Back to Main Menu
-""")
-        
-        choice = input("Enter your choice: ").lower().strip()
-        
-        if choice in ["1", "play again", "p"]:
-            self.play_round()
-        elif choice in ["2", "rock-paper-scissors menu", "r"]:
-            self.main_menu()
-        elif choice in ["3", "back to main menu", "b"] + self.menu_choices:
-            return
-        else:
-            print("Invalid option. Please try again.")
-            self.after_game_menu()
+# ---------------------- 2. ROCK-PAPER-SCISSORS ----------------------
 
-    def settings_menu(self) -> None:
-        '''Display and handle settings.'''
-        clear_screen()
-        
-        print(f"""Settings:
-1. Require Names: {self.require_names}
-2. Two Player Mode: {self.two_player_mode}
-3. Reset to Default Settings
-4. Back to Rock-Paper-Scissors Menu
-""")
-        
-        choice = input("Enter your choice: ").lower().strip()
-        
-        if choice in ["1", "require names", "n"]:
-            self.require_names = not self.require_names
-            self.has_names = False
-            self.settings_menu()
-        elif choice in ["2", "two player mode", "t"]:
-            self.two_player_mode = not self.two_player_mode
-            self.player2_name = "Player 2" if self.two_player_mode and not self.require_names else "The Bot"
-            self.settings_menu()
-        elif choice in ["3", "reset to default settings", "d"]:
-            self.reset_settings()
-            self.settings_menu()
-        elif choice in ["4", "back to rock-paper-scissors menu", "b"]:
-            self.main_menu()
-        else:
-            print("Invalid option. Please try again.")
-            self.settings_menu()
+class RockPaperScissors:
+    CHOICES = ["rock", "paper", "scissors"]
 
-    def play(self) -> None:
-        '''Main function to start the Rock-Paper-Scissors game.'''
-        self.main_menu()
+    # What each choice beats: rock beats scissors, and so on.
+    BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
 
-# ---------------------- NUMBER GUESSING GAME CLASS ----------------------
-class NumberGuessingGame:
     def __init__(self):
-        self.min_num = 1
-        self.max_num = 100
-        self.attempts = 5
-        self.target_number = None
-        self.guesses = []
+        self.two_players = False
+        self.ask_names = True
+        self.set_default_names()
 
-    def setup_game(self) -> None:
-        '''Set up the game parameters.'''
-        # Get number of attempts
-        self.attempts = validate_integer_input(
-            "Enter the number of attempts you would like to have: ",
-            min_value=1,
-            error_message="You must have at least 1 attempt."
-        )
-        
-        # Get number range
-        self.max_num = validate_integer_input("Enter the highest number for the range: ")
-        self.min_num = validate_integer_input(
-            "Enter the lowest number for the range: ",
-            max_value=self.max_num,
-            error_message=f"The lowest number must be less than or equal to {self.max_num}."
-        )
-        
-        # Generate random number
-        self.target_number = random.randint(self.min_num, self.max_num)
-        self.guesses = []
+    def set_default_names(self):
+        self.player1 = "Player 1"
+        self.player2 = "Player 2" if self.two_players else "The Bot"
+        self.names_entered = False
+        self.reset_scores()
 
-    def get_guess(self, attempt: int) -> int:
-        '''Get the user's guess.'''
-        return validate_integer_input(
-            f"\nAttempt {attempt}: ",
-            min_value=self.min_num,
-            max_value=self.max_num,
-            error_message=f"Please enter a number between {self.min_num} and {self.max_num}."
-        )
+    def reset_scores(self):
+        self.score1 = 0
+        self.score2 = 0
 
-    def check_guess(self, guess: int, attempt: int) -> bool:
-        '''Check if the guess is correct.'''
-        if guess == self.target_number:
-            print(f"Correct! You guessed the number in {attempt} attempts.")
-            return True
-        
-        print("Too low!" if guess < self.target_number else "Too high!")
-        return False
+    def ask_choice(self, player_name):
+        """Ask a player for rock, paper or scissors. Accepts 1/2/3, r/p/s or the full word."""
+        shortcuts = {"1": "rock", "r": "rock",
+                     "2": "paper", "p": "paper",
+                     "3": "scissors", "s": "scissors"}
+        while True:
+            answer = input(f"{player_name}, choose 1. Rock  2. Paper  3. Scissors: ").strip().lower()
+            answer = shortcuts.get(answer, answer)
+            if answer in self.CHOICES:
+                return answer
+            print("Invalid choice. Please try again.")
 
-    def print_summary(self, attempt: int, win: bool) -> None:
-        '''Print a summary of the game.'''
-        odd_guesses = [g for g in self.guesses if g % 2 != 0]
-        even_guesses = [g for g in self.guesses if g % 2 == 0]
-        
-        print("\nGame Summary")
-        print(f"- Result: {'You guessed correctly!' if win else 'You did not guess correctly!'}")
-        print(f"- Target number: {self.target_number}")
-        print(f"- Number of attempts used: {attempt}")
-        print(f"- Your guesses: {self.guesses}")
-        print(f"- Even guesses: {even_guesses}")
-        print(f"- Odd guesses: {odd_guesses}")
+    def enter_names(self):
+        clear_screen()
+        self.player1 = input("Player 1, enter your name: ").strip() or "Player 1"
+        if self.two_players:
+            self.player2 = input("Player 2, enter your name: ").strip() or "Player 2"
+            print(f"\nHello {self.player1} and {self.player2}!")
+        else:
+            print(f"\nHello {self.player1}! You'll be playing against {self.player2}.")
+        self.names_entered = True
+        self.reset_scores()
+        pause()
 
-    def play(self) -> None:
-        '''Main game function.'''
+    def play_round(self):
+        clear_screen()
+        choice1 = self.ask_choice(self.player1)
+
+        if self.two_players:
+            clear_screen()  # hide player 1's choice from player 2
+            choice2 = self.ask_choice(self.player2)
+        else:
+            choice2 = random.choice(self.CHOICES)
+
+        clear_screen()
+        print(f"{self.player1} chose {choice1}.")
+        print(f"{self.player2} chose {choice2}.\n")
+
+        if choice1 == choice2:
+            print("It's a tie!")
+        elif self.BEATS[choice1] == choice2:
+            print(f"{self.player1} wins!")
+            self.score1 += 1
+        else:
+            print(f"{self.player2} wins!")
+            self.score2 += 1
+
+        self.print_scores()
+
+    def print_scores(self):
+        print(f"\nScore: {self.player1} {self.score1} - {self.score2} {self.player2}")
+
+    def settings(self):
+        while True:
+            clear_screen()
+            print("Settings")
+            print(f"1. Ask for names:  {'On' if self.ask_names else 'Off'}")
+            print(f"2. Two players:    {'On' if self.two_players else 'Off'}")
+            print("3. Reset to default settings")
+            print("4. Back")
+            choice = input("\nEnter your choice: ").strip()
+
+            if choice == "1":
+                self.ask_names = not self.ask_names
+                self.set_default_names()
+            elif choice == "2":
+                self.two_players = not self.two_players
+                self.set_default_names()
+            elif choice == "3":
+                self.two_players = False
+                self.ask_names = True
+                self.set_default_names()
+            elif choice == "4":
+                return
+
+    def play(self):
+        while True:
+            clear_screen()
+            print("Rock, Paper, Scissors!")
+            print("Rock beats Scissors, Scissors beats Paper, and Paper beats Rock.\n")
+            print("1. Play")
+            print("2. Settings")
+            print("3. Back to Main Menu")
+            choice = input("\nEnter your choice: ").strip()
+
+            if choice == "1":
+                if self.ask_names and not self.names_entered:
+                    self.enter_names()
+                while True:
+                    self.play_round()
+                    if not ask_yes_no("\nPlay another round?"):
+                        break
+            elif choice == "2":
+                self.settings()
+            elif choice == "3":
+                return
+
+
+# ---------------------- 3. NUMBER GUESSING GAME ----------------------
+
+class NumberGuessingGame:
+    def play(self):
         clear_screen()
         print("Number Guessing Game")
-        
+
         while True:
-            self.setup_game()
-            
-            print(f"\nI'm thinking of a number between {self.min_num} and {self.max_num}.")
-            print(f"You have {self.attempts} attempts to guess it.")
-            
-            win = False
-            for attempt_num in range(1, self.attempts + 1):
-                guess = self.get_guess(attempt_num)
-                self.guesses.append(guess)
-                
-                if self.check_guess(guess, attempt_num):
-                    win = True
+            lowest = ask_int("\nEnter the lowest number of the range: ")
+            highest = ask_int("Enter the highest number of the range: ", min_value=lowest)
+            max_attempts = ask_int("How many attempts would you like? ", min_value=1)
+
+            secret = random.randint(lowest, highest)
+            guesses = []
+            print(f"\nI'm thinking of a number between {lowest} and {highest}.")
+            print(f"You have {max_attempts} attempts to guess it.")
+
+            while len(guesses) < max_attempts:
+                guess = ask_int(f"\nAttempt {len(guesses) + 1}: ", lowest, highest)
+                guesses.append(guess)
+
+                if guess == secret:
                     break
-                
-                if attempt_num == self.attempts:
-                    print("\nYou've run out of attempts!")
-                    print(f"The number was {self.target_number}.")
-            
-            self.print_summary(attempt_num, win)
-            
-            if not get_yes_no_input("\nDo you want to play again?"):
+                elif guess < secret:
+                    print("Too low!")
+                else:
+                    print("Too high!")
+
+            won = guesses[-1] == secret
+            if won:
+                tries = "try" if len(guesses) == 1 else "tries"
+                print(f"\nCorrect! You guessed it in {len(guesses)} {tries}.")
+            else:
+                print(f"\nYou've run out of attempts! The number was {secret}.")
+
+            print("\nGame Summary")
+            print(f"- Secret number: {secret}")
+            print(f"- Your guesses:  {guesses}")
+            print(f"- Even guesses:  {[g for g in guesses if g % 2 == 0]}")
+            print(f"- Odd guesses:   {[g for g in guesses if g % 2 != 0]}")
+
+            if not ask_yes_no("\nDo you want to play again?"):
                 break
 
-# ---------------------- COIN FLIP CLASS ----------------------
+
+# ---------------------- 4. COIN FLIP ----------------------
+
 class CoinFlip:
-    HEADS = "Heads"
-    TAILS = "Tails"
-    
-    def play(self) -> None:
-        '''Run the coin flip game.'''
+    def play(self):
         clear_screen()
         print("Coin Flip")
-        
+        heads = 0
+        tails = 0
+
         while True:
             input("\nPress Enter to flip a coin...")
-            clear_screen()
-            print("Flipping coin...")
-            time.sleep(COIN_FLIP_DELAY)  # Using constant for delay
-            
-            # Perform the coin flip
-            result = self.HEADS if random.randint(1, 2) == 1 else self.TAILS
-            print(f"The coin landed on: {result}!")
-            
-            if not get_yes_no_input("\nDo you want to flip again?"):
+            print("Flipping...")
+            time.sleep(0.5)  # a short pause for suspense
+
+            result = random.choice(["Heads", "Tails"])
+            if result == "Heads":
+                heads += 1
+            else:
+                tails += 1
+
+            print(f"The coin landed on {result}!")
+            print(f"So far: {heads} heads, {tails} tails.")
+
+            if not ask_yes_no("\nDo you want to flip again?"):
                 break
 
-# ---------------------- TEMPERATURE CONVERTER CLASS ----------------------
+
+# ---------------------- 5. TEMPERATURE CONVERTER ----------------------
+
 class TemperatureConverter:
-    def celsius_to_fahrenheit(self, celsius: float) -> float:
-        '''Convert Celsius to Fahrenheit.'''
-        return (celsius * 9/5) + 32
-    
-    def fahrenheit_to_celsius(self, fahrenheit: float) -> float:
-        '''Convert Fahrenheit to Celsius.'''
-        return (fahrenheit - 32) * 5/9
-    
-    def play(self) -> None:
-        '''Run the temperature converter.'''
+    def celsius_to_fahrenheit(self, celsius):
+        return celsius * 9 / 5 + 32
+
+    def fahrenheit_to_celsius(self, fahrenheit):
+        return (fahrenheit - 32) * 5 / 9
+
+    def play(self):
         clear_screen()
         print("Temperature Converter")
-        
-        while True:
-            try:
-                # Get temperature and conversion direction
-                temperature = validate_float_input("Enter temperature: ")
-                
-                while True:
-                    unit = input("Convert to (C/F): ").upper().strip()
-                    if unit in ["C", "F"]:
-                        break
-                    print("Please enter either 'C' for Celsius or 'F' for Fahrenheit.")
-                
-                # Perform conversion
-                if unit == "C":
-                    converted = self.fahrenheit_to_celsius(temperature)
-                    print(f"{temperature}°F is {converted:.2f}°C")
-                else:  # unit == "F"
-                    converted = self.celsius_to_fahrenheit(temperature)
-                    print(f"{temperature}°C is {converted:.2f}°F")
-                
-                if not get_yes_no_input("\nDo you want to convert another temperature?"):
-                    break
-                    
-            except ValueError as e:
-                print(f"Error: {e}")
-                print("Please try again.")
 
-# ---------------------- SIMPLE CALCULATOR CLASS ----------------------
+        while True:
+            print("\n1. Celsius -> Fahrenheit")
+            print("2. Fahrenheit -> Celsius")
+            direction = ask_int("Choose 1 or 2: ", 1, 2)
+            temperature = ask_float("Enter the temperature: ")
+
+            if direction == 1:
+                result = self.celsius_to_fahrenheit(temperature)
+                print(f"{format_number(temperature)}°C = {result:.1f}°F")
+            else:
+                result = self.fahrenheit_to_celsius(temperature)
+                print(f"{format_number(temperature)}°F = {result:.1f}°C")
+
+            if not ask_yes_no("\nDo you want to convert another temperature?"):
+                break
+
+
+# ---------------------- 6. SIMPLE CALCULATOR ----------------------
+
 class SimpleCalculator:
-    def add(self, a: float, b: float) -> float:
-        return a + b
-    
-    def subtract(self, a: float, b: float) -> float:
-        return a - b
-    
-    def multiply(self, a: float, b: float) -> float:
-        return a * b
-    
-    def divide(self, a: float, b: float) -> float:
-        if b == 0:
-            raise ValueError("Cannot divide by zero")
-        return a / b
-    
-    def play(self) -> None:
-        '''Run the calculator.'''
+    def calculate(self, a, operator, b):
+        """Return the result, or None if the calculation is impossible (dividing by zero)."""
+        if operator == "+":
+            return a + b
+        if operator == "-":
+            return a - b
+        if operator == "*":
+            return a * b
+        if operator == "/":
+            if b == 0:
+                return None
+            return a / b
+
+    def play(self):
         clear_screen()
         print("Simple Calculator")
-        
-        operations = {
-            "+": self.add,
-            "-": self.subtract,
-            "*": self.multiply,
-            "/": self.divide
-        }
-        
-        while True:
-            try:
-                # Get inputs
-                num1 = validate_float_input("Enter first number: ")
-                
-                while True:
-                    op = input("Enter operation (+, -, *, /): ").strip()
-                    if op in operations:
-                        break
-                    print("Please enter a valid operation: +, -, *, or /")
-                
-                num2 = validate_float_input("Enter second number: ")
-                
-                # Perform calculation - more Pythonic using a dictionary of functions
-                try:
-                    result = operations[op](num1, num2)
-                    print(f"Result: {result}")
-                except ValueError as e:
-                    print(f"Error: {e}")
-                    if not get_yes_no_input("Do you want to try again?"):
-                        break
-                    continue
-                
-                if not get_yes_no_input("\nDo you want to perform another calculation?"):
-                    break
-                    
-            except ValueError as e:
-                print(f"Error: {e}")
-                if not get_yes_no_input("Do you want to try again?"):
-                    break
 
-# ---------------------- DICE ROLLER CLASS ----------------------
+        while True:
+            a = ask_float("\nEnter the first number: ")
+
+            operator = input("Enter an operator (+, -, *, /): ").strip()
+            while operator not in ("+", "-", "*", "/"):
+                operator = input("Please enter +, -, * or /: ").strip()
+
+            b = ask_float("Enter the second number: ")
+
+            result = self.calculate(a, operator, b)
+            if result is None:
+                print("Error: you can't divide by zero.")
+            else:
+                print(f"{format_number(a)} {operator} {format_number(b)} = {format_number(result)}")
+
+            if not ask_yes_no("\nDo you want to do another calculation?"):
+                break
+
+
+# ---------------------- 7. DICE ROLLER ----------------------
+
 class DiceRoller:
-    def play(self) -> None:
-        '''Run the dice roller.'''
+    def play(self):
         clear_screen()
         print("Dice Roller")
-        
-        while True:
-            try:
-                # Get number of sides
-                sides = validate_integer_input(
-                    "Enter number of sides on the dice: ",
-                    min_value=MIN_DICE_SIDES,
-                    error_message=f"A dice must have at least {MIN_DICE_SIDES} sides."
-                )
-                
-                # Roll the dice
-                roll = random.randint(1, sides)
-                print(f"You rolled a {roll}!")
-                
-                if not get_yes_no_input("\nDo you want to roll again?"):
-                    break
-                    
-            except ValueError as e:
-                print(f"Error: {e}")
-                print("Please try again.")
 
-# ---------------------- MAIN MENU CLASS ----------------------
+        while True:
+            sides = ask_int("\nHow many sides does each die have? ", min_value=2)
+            count = ask_int("How many dice do you want to roll? ", min_value=1)
+
+            rolls = [random.randint(1, sides) for _ in range(count)]
+
+            if count == 1:
+                print(f"You rolled a {rolls[0]}!")
+            else:
+                print(f"You rolled: {rolls}")
+                print(f"Total: {sum(rolls)}")
+
+            if not ask_yes_no("\nDo you want to roll again?"):
+                break
+
+
+# ---------------------- MAIN MENU ----------------------
+
 class GameSuite:
     def __init__(self):
-        self.games = {
-            "1": ("Tic-Tac-Toe", TicTacToeGame()),
-            "2": ("Rock-Paper-Scissors", RockPaperScissorsGame()),
+        # Menu number -> (name, project object)
+        self.projects = {
+            "1": ("Tic-Tac-Toe", TicTacToe()),
+            "2": ("Rock-Paper-Scissors", RockPaperScissors()),
             "3": ("Number Guessing Game", NumberGuessingGame()),
             "4": ("Coin Flip", CoinFlip()),
             "5": ("Temperature Converter", TemperatureConverter()),
             "6": ("Simple Calculator", SimpleCalculator()),
-            "7": ("Dice Roller", DiceRoller())
+            "7": ("Dice Roller", DiceRoller()),
         }
+        self.quit_option = str(len(self.projects) + 1)
 
-    def show_menu(self) -> str:
-        '''Show the main menu and get user choice.'''
+    def show_menu(self):
         clear_screen()
-        print("""
-Welcome to the All-In-One Game Suite!
-Please choose an option:""")
-        
-        for key, (name, _) in self.games.items():
-            print(f"{key}. {name}")
-        
-        print("8. Quit")
-        
+        print("Welcome to the All-In-One Game Suite!\n")
+        for number, (name, _) in self.projects.items():
+            print(f"{number}. {name}")
+        print(f"{self.quit_option}. Quit")
         return input("\nEnter your choice: ").strip()
 
-    def run(self) -> None:
-        '''Run the game suite.'''
+    def run(self):
         while True:
             choice = self.show_menu()
-            
-            if choice in self.games:
-                _, game = self.games[choice]
-                game.play()
-            elif choice == "8":
+
+            if choice in self.projects:
+                _, project = self.projects[choice]
+                project.play()
+            elif choice == self.quit_option:
                 clear_screen()
                 print("Thank you for playing. Goodbye!")
                 break
             else:
                 print("Invalid option. Please try again.")
-                input("Press Enter to continue...")
+                pause()
 
-# Start the program
+
 if __name__ == "__main__":
     try:
-        game_suite = GameSuite()
-        game_suite.run()
-    except KeyboardInterrupt:
-        clear_screen()
-        print("\nProgram interrupted. Exiting...")
-    except Exception as e:
-        clear_screen()
-        print(f"\nAn unexpected error occurred: {e}")
-        print("The program will now exit.") 
+        GameSuite().run()
+    except (KeyboardInterrupt, EOFError):
+        # Ctrl+C (or Ctrl+D) quits the program without an ugly error message.
+        print("\n\nGoodbye!")
